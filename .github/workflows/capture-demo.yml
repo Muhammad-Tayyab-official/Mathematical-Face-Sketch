@@ -34,7 +34,7 @@ jobs:
           pip install playwright
 
       - name: Install Chromium
-        run: python -m playwright install --with-deps chromium
+        run: python -m playwright install chromium
 
       - name: Start application
         run: |
