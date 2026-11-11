@@ -1,0 +1,73 @@
+name: Capture Mathematical Face Sketch demo
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app.py"
+      - "math_engine.py"
+      - "requirements.txt"
+      - ".github/workflows/capture-demo.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install application dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install playwright
+
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Start application
+        run: |
+          nohup streamlit run app.py --server.headless true --server.port 8501 > /tmp/face-sketch.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail --silent http://localhost:8501/_stcore/health; then
+              echo "Mathematical Face Sketch is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/face-sketch.log
+          exit 1
+
+      - name: Capture initial application interface
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+
+          Path("screenshots").mkdir(exist_ok=True)
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              page = browser.new_page(viewport={"width": 1440, "height": 1100}, device_scale_factor=1)
+              page.goto("http://127.0.0.1:8501", wait_until="networkidle", timeout=90000)
+              page.screenshot(path="screenshots/mathematical-face-sketch-app.png", full_page=True)
+              browser.close()
+          PY
+
+      - name: Upload screenshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mathematical-face-sketch-screenshots
+          path: screenshots/
+          if-no-files-found: error
+          retention-days: 14
