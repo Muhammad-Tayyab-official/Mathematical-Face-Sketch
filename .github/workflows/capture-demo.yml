@@ -11,7 +11,7 @@ on:
       - ".github/workflows/capture-demo.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   capture:
@@ -63,6 +63,14 @@ jobs:
               page.screenshot(path="screenshots/mathematical-face-sketch-app.png", full_page=True)
               browser.close()
           PY
+
+      - name: Commit screenshot to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add screenshots/mathematical-face-sketch-app.png
+          git diff --cached --quiet || git commit -m "Save generated app screenshot in repository"
+          git push
 
       - name: Upload screenshot artifact
         uses: actions/upload-artifact@v4
